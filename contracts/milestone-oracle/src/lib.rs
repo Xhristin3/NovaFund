@@ -1,8 +1,8 @@
 #![no_std]
 
-use shared::types::{MilestoneStatus, Timestamp};
+use shared::types::MilestoneStatus;
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, token, Address, Env, Symbol, Vec,
+    contract, contractimpl, contracttype, symbol_short, token, Address, Env, Vec,
 };
 
 #[derive(Clone)]
@@ -21,7 +21,7 @@ pub enum DataKey {
     UnstakeRequests(Address),
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 #[contracttype]
 pub struct Votes {
     pub approvals: Vec<Address>,
@@ -271,7 +271,11 @@ impl MilestoneOracle {
     /// Get the current status of a milestone.
     pub fn get_milestone_status(env: Env, project_id: u64, milestone_id: u64) -> MilestoneStatus {
         let key = DataKey::Votes(project_id, milestone_id);
-        let votes: Votes = env.storage().persistent().get(&key).unwrap_or_default();
+        let votes: Votes = env.storage().persistent().get(&key).unwrap_or(Votes {
+            approvals: Vec::new(&env),
+            rejections: Vec::new(&env),
+            finalized: false,
+        });
 
         if votes.finalized {
             let quorum: u32 = env.storage().instance().get(&DataKey::Quorum).unwrap();
@@ -292,7 +296,11 @@ impl MilestoneOracle {
         env.storage()
             .persistent()
             .get(&DataKey::Votes(project_id, milestone_id))
-            .unwrap_or_default()
+            .unwrap_or(Votes {
+                approvals: Vec::new(&env),
+                rejections: Vec::new(&env),
+                finalized: false,
+            })
     }
 
     /// Get auditor's current stake.
